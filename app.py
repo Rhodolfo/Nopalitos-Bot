@@ -8,24 +8,30 @@ import re
 # Cosas de base de ddatos 
 db_pth = "db/nopalitos.db"
 
-# Declaremos constantes
-cnl_bot_chat = 1207367388383940608
-cnl_tekken = 803316619438719016
-cnl_street = 1462935657864237262
+# Declaramos constantes
 bot_token = os.environ['NPL_TOKEN']
+msg_platform = os.environ['NPL_MSG_PLATFORM']
+msg_game = os.environ['NPL_MSN_GAME']
+
+# Variables internas del bot
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!",intents=intents)
 
+
+
+# Extrae discord id de usuario directamente de un mention
 def convert_mention_to_id(mention):
     return int(mention[1:][:len(mention)-2].replace("@","").replace("!",""))
+
+
 
 @bot.event
 async def on_ready():
     print("Nopalibot en consola listo!")
-    #channel = bot.get_channel(cnl_bot_chat)
-    #await channel.send("Nopalibot listo!")
     pass
+
+
 
 @bot.command(name="tekken-id")
 async def tekken_id(context, arg: str|None):
