@@ -1,0 +1,3 @@
+El bot requiere la variable de ambiente NPL_TOKEN con el token del bot.
+
+Por otro lado, requieres el archivo nopalitos.db, este no va en el repo.
