@@ -5,17 +5,21 @@ import os
 import sqlite3
 import re
 
-# Cosas de base de ddatos 
+
+
+# Cosas de base de datos 
 db_pth = "db/nopalitos.db"
 
 # Declaramos constantes
 bot_token = os.environ['NPL_TOKEN']
-msg_platform = os.environ['NPL_MSG_PLATFORM']
-msg_game = os.environ['NPL_MSN_GAME']
+msg_platform = int(os.environ['NPL_MSG_PLATFORM'])
+msg_game = int(os.environ['NPL_MSG_GAME'])
 
 # Variables internas del bot
 intents = discord.Intents.default()
 intents.message_content = True
+intents.reactions = True
+intents.members = True
 bot = commands.Bot(command_prefix="!",intents=intents)
 
 
@@ -31,13 +35,72 @@ async def on_ready():
     print("Nopalibot en consola listo!")
     pass
 
+@bot.event
+async def on_raw_reaction_add(payload):
+    id_user = int(payload.user_id)
+    id_message = int(payload.message_id)
+    id_emoji = int(payload.emoji.id)
+    guild = bot.get_guild(payload.guild_id)
+    if id_message==msg_platform:
+        user = await guild.fetch_member(id_user)
+        if id_emoji==int(os.environ['NPL_EMO_XBOX']):
+            role = discord.utils.get(guild.roles,name="Xbox Player")
+            await user.add_roles(role)
+        elif id_emoji==int(os.environ['NPL_EMO_PLAYSTATION']):
+            role = discord.utils.get(guild.roles,name="PS Player")
+            await user.add_roles(role)
+        elif id_emoji==int(os.environ['NPL_EMO_PC']):
+            role = discord.utils.get(guild.roles,name="PC Player")
+            await user.add_roles(role)
+    elif (id_message==msg_game):
+        user = await guild.fetch_member(id_user)
+        if id_emoji==int(os.environ['NPL_EMO_TEKKEN8']):
+            role = discord.utils.get(guild.roles,name="Tekken")
+            await user.add_roles(role)
+        elif id_emoji==int(os.environ['NPL_EMO_STREET6']):
+            role = discord.utils.get(guild.roles,name="SF6")
+            await user.add_roles(role)
+        elif id_emoji==int(os.environ['NPL_EMO_2XKO']):
+            role = discord.utils.get(guild.roles,name="2XKO")
+            await user.add_roles(role)
+
+
+
+@bot.event
+async def on_raw_reaction_remove(payload):
+    id_user = int(payload.user_id)
+    id_message = int(payload.message_id)
+    id_emoji = int(payload.emoji.id)
+    guild = bot.get_guild(payload.guild_id)
+    if id_message==msg_platform:
+        user = await guild.fetch_member(id_user)
+        if id_emoji==int(os.environ['NPL_EMO_XBOX']):
+            role = discord.utils.get(guild.roles,name="Xbox Player")
+            await user.remove_roles(role)
+        elif id_emoji==int(os.environ['NPL_EMO_PLAYSTATION']):
+            role = discord.utils.get(guild.roles,name="PS Player")
+            await user.remove_roles(role)
+        elif id_emoji==int(os.environ['NPL_EMO_PC']):
+            role = discord.utils.get(guild.roles,name="PC Player")
+            await user.remove_roles(role)
+    elif (id_message==msg_game):
+        user = await guild.fetch_member(id_user)
+        if id_emoji==int(os.environ['NPL_EMO_TEKKEN8']):
+            role = discord.utils.get(guild.roles,name="Tekken")
+            await user.remove_roles(role)
+        elif id_emoji==int(os.environ['NPL_EMO_STREET6']):
+            role = discord.utils.get(guild.roles,name="SF6")
+            await user.remove_roles(role)
+        elif id_emoji==int(os.environ['NPL_EMO_2XKO']):
+            role = discord.utils.get(guild.roles,name="2XKO")
+            await user.remove_roles(role)
+
 
 
 @bot.command(name="tekken-id")
 async def tekken_id(context, arg: str|None):
 
     # Declaraciones iniciales para todas las opciones
-    print(context.message.content)
     db_con = sqlite3.connect(db_pth)
     db_cur = db_con.cursor()
     channel = bot.get_channel(context.message.channel.id)
@@ -59,7 +122,6 @@ async def tekken_id(context, arg: str|None):
     else:
         mode = "invalid"
         id_discord = None
-    print(mode)
 
     # Obten datos de Tekken ID
     if (mode!="invalid"):
