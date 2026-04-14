@@ -319,12 +319,18 @@ async def ft(context, *args):
         @discord.ui.button(label="Aceptar", style=discord.ButtonStyle.green,row=0)
         async def button_accept_callback(self, interaction, button):
             print("Aceptando duelo")
-            member_init = interaction.message.mentions[0]
-            member_endr = interaction.message.mentions[1]
             mentions = interaction.message.mentions
+            id_a = interaction.message.mentions[0].id
+            id_b = interaction.message.mentions[1].id
+            dx_a = interaction.message.content.find(str(id_a))
+            dx_b = interaction.message.content.find(str(id_b))
+            if (dx_a<dx_b):
+                id_init = int(id_a)
+                id_endr = int(id_b)
+            else:
+                id_init = int(id_b)
+                id_endr = int(id_a)
             pusher = int(interaction.user.id)
-            id_init = int(member_init.id)
-            id_endr = int(member_endr.id)
             game = str(interaction.message.embeds[0].author.name)
             print("Game: "+str(game))
             print("Init: "+str(id_init))
@@ -348,12 +354,18 @@ async def ft(context, *args):
         @discord.ui.button(label="Rechazar", style=discord.ButtonStyle.red,row=0)
         async def button_reject_callback(self, interaction, button):
             print("Rechazando duelo")
-            member_init = interaction.message.mentions[0]
-            member_endr = interaction.message.mentions[1]
             mentions = interaction.message.mentions
+            id_a = interaction.message.mentions[0].id
+            id_b = interaction.message.mentions[1].id
+            dx_a = interaction.message.content.find(str(id_a))
+            dx_b = interaction.message.content.find(str(id_b))
+            if (dx_a<dx_b):
+                id_init = int(id_a)
+                id_endr = int(id_b)
+            else:
+                id_init = int(id_b)
+                id_endr = int(id_a)
             pusher = int(interaction.user.id)
-            id_init = int(member_init.id)
-            id_endr = int(member_endr.id)
             game = str(interaction.message.embeds[0].author.name)
             print("Game: "+str(game))
             print("Init: "+str(id_init))
@@ -389,7 +401,7 @@ async def ft_force(context,*args):
         message = "Este comando requiere tres argumentos: dos menciones y un dia."
         await channel.send(message)
         return
-    elif not len(args)>1 or not bool(re.search("^<@.*?>$",args[0])):
+    elif not len(args)>1 or not bool(re.search("^<@.*?>$",args[1])):
         message = "Este comando requiere tres argumentos: dos menciones y un dia."
         await channel.send(message)
         return
@@ -437,13 +449,20 @@ async def ft_force(context,*args):
         @discord.ui.button(label="Aceptar", style=discord.ButtonStyle.green,row=0)
         async def button_accept_callback(self, interaction, button):
             print("Aceptando duelo")
-            member_init = interaction.message.mentions[0]
-            member_endr = interaction.message.mentions[1]
             mentions = interaction.message.mentions
+            id_a = interaction.message.mentions[0].id
+            id_b = interaction.message.mentions[1].id
+            dx_a = interaction.message.content.find(str(id_a))
+            dx_b = interaction.message.content.find(str(id_b))
+            if (dx_a<dx_b):
+                id_init = int(id_a)
+                id_endr = int(id_b)
+            else:
+                id_init = int(id_b)
+                id_endr = int(id_a)
             pusher = int(interaction.user.id)
-            id_init = int(member_init.id)
-            id_endr = int(member_endr.id)
             game = str(interaction.message.embeds[0].author.name)
+
             print("Game: "+str(game))
             print("Init: "+str(id_init))
             print("Endr: "+str(id_endr))
@@ -466,12 +485,18 @@ async def ft_force(context,*args):
         @discord.ui.button(label="Rechazar", style=discord.ButtonStyle.red,row=0)
         async def button_reject_callback(self, interaction, button):
             print("Rechazando duelo")
-            member_init = interaction.message.mentions[0]
-            member_endr = interaction.message.mentions[1]
             mentions = interaction.message.mentions
+            id_a = interaction.message.mentions[0].id
+            id_b = interaction.message.mentions[1].id
+            dx_a = interaction.message.content.find(str(id_a))
+            dx_b = interaction.message.content.find(str(id_b))
+            if (dx_a<dx_b):
+                id_init = int(id_a)
+                id_endr = int(id_b)
+            else:
+                id_init = int(id_b)
+                id_endr = int(id_a)
             pusher = int(interaction.user.id)
-            id_init = int(member_init.id)
-            id_endr = int(member_endr.id)
             game = str(interaction.message.embeds[0].author.name)
             print("Game: "+str(game))
             print("Init: "+str(id_init))
