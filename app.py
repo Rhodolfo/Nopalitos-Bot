@@ -320,22 +320,28 @@ async def ft(context, *args):
     class ChallengeView(discord.ui.View):
         @discord.ui.button(label="Aceptar", style=discord.ButtonStyle.green,row=0)
         async def button_accept_callback(self, interaction, button):
-            print("Aceptando, pusher vs retado")
-            mentions = interaction.message.mentions()
+            print("Aceptando duelo")
+            member_init = interaction.message.mentions[0]
+            member_endr = interaction.message.mentions[1]
+            mentions = interaction.message.mentions
             pusher = int(interaction.user.id)
-            print(mentions)
-            print(pusher)
-            print(id_discord_b)
-            if (pusher==id_discord_b):
+            id_init = int(member_init.id)
+            id_endr = int(member_endr.id)
+            game = str(interaction.message.embeds[0].author.name)
+            print("Game: "+str(game))
+            print("Init: "+str(id_init))
+            print("Endr: "+str(id_endr))
+            print("Push: "+str(pusher))
+            if (pusher==id_endr):
                 db_con = sqlite3.connect(db_pth)
                 db_cur = db_con.cursor()
                 db_cur.execute("select id_dia,id_discord_a,id_discord_b,juego from duelos where id_dia=?",(id_dia,))
                 db_res = db_cur.fetchall()
                 if (len(db_res)<maxRetasDia):
-                    db_cur.execute("insert into duelos values (?,?,?,?)",(id_dia,id_discord_a,id_discord_b,nm_juego))
+                    db_cur.execute("insert into duelos values (?,?,?,?)",(id_dia,id_init,id_endr,game))
                     db_con.commit()
                     await interaction.message.delete()
-                    message = "```ansi\n\u001b[0;34mTENEMOS DUELO CONFIRMADO\u001b[0m\n```\n<@"+str(id_discord_a)+"> <@"+str(id_discord_b)+"> ["+str(nm_juego)+"] "+str(days_hr[id_dia])
+                    message = "```ansi\n\u001b[0;34mTENEMOS DUELO CONFIRMADO\u001b[0m\n```\n<@"+str(id_discord_a)+"> <@"+str(id_discord_b)+"> ["+str(game)+"] "+str(days_hr[id_dia])
                     await challenge_channel.send(message)
                 else:
                     await interaction.response.send_message("Este día ya tiene "+str(maxRetasDia)+" duelos o más programados.")
@@ -343,11 +349,19 @@ async def ft(context, *args):
                 return
         @discord.ui.button(label="Rechazar", style=discord.ButtonStyle.red,row=0)
         async def button_reject_callback(self, interaction, button):
-            print("Rechazando, pusher vs retado")
+            print("Rechazando duelo")
+            member_init = interaction.message.mentions[0]
+            member_endr = interaction.message.mentions[1]
+            mentions = interaction.message.mentions
             pusher = int(interaction.user.id)
-            print(pusher)
-            print(id_discord_b)
-            if (pusher==id_discord_b):
+            id_init = int(member_init.id)
+            id_endr = int(member_endr.id)
+            game = str(interaction.message.embeds[0].author.name)
+            print("Game: "+str(game))
+            print("Init: "+str(id_init))
+            print("Endr: "+str(id_endr))
+            print("Push: "+str(pusher))
+            if (pusher==id_endr):
                 await interaction.message.delete()
             else:
                 return
