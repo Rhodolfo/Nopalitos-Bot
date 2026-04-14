@@ -245,8 +245,6 @@ async def ft(context, *args):
 
     # Terminamos este comando si no esta en un canal valido o si no retamos a alguien valido
     if (not id_channel in valid_channels):
-        message = "<@"+str(id_discord_a)+"> "+"Este comando está bajo construcción."
-        await channel.send(message)
         return
     elif not len(args)>0 or not bool(re.search("^<@.*?>$",args[0])):
         message = "<@"+str(id_discord_a)+"> "+"Este comando requiere que retes a otra persona con una mención."
