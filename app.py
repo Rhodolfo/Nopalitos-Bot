@@ -320,7 +320,12 @@ async def ft(context, *args):
     class ChallengeView(discord.ui.View):
         @discord.ui.button(label="Aceptar", style=discord.ButtonStyle.green,row=0)
         async def button_accept_callback(self, interaction, button):
+            print("Aceptando, pusher vs retado")
+            mentions = interaction.message.mentions()
             pusher = int(interaction.user.id)
+            print(mentions)
+            print(pusher)
+            print(id_discord_b)
             if (pusher==id_discord_b):
                 db_con = sqlite3.connect(db_pth)
                 db_cur = db_con.cursor()
@@ -338,7 +343,10 @@ async def ft(context, *args):
                 return
         @discord.ui.button(label="Rechazar", style=discord.ButtonStyle.red,row=0)
         async def button_reject_callback(self, interaction, button):
+            print("Rechazando, pusher vs retado")
             pusher = int(interaction.user.id)
+            print(pusher)
+            print(id_discord_b)
             if (pusher==id_discord_b):
                 await interaction.message.delete()
             else:
