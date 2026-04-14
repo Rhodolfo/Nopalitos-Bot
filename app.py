@@ -311,6 +311,8 @@ async def ft(context, *args):
         title="DUELO PARA EL DÍA "+str.upper(days_hr[id_dia]),
         description="¿Aceptas el reto, <@"+str(id_discord_b)+">?"
     )
+    invite.set_image(url=str(os.environ["NPL_IMG_CHALLENGE"]))
+    invite.set_thumbnail(url=str(os.environ["NPL_IMG_CHALLTHMB"]))
     invite.set_author(name=nm_juego)
 
     # Botones de reto
@@ -328,7 +330,7 @@ async def ft(context, *args):
                     db_cur.execute("insert into duelos values (?,?,?,?)",(id_dia,id_discord_a,id_discord_b,nm_juego))
                     db_con.commit()
                     await interaction.message.delete()
-                    message = "`TENEMOS DUELO CONFIRMADO`\n<@"+str(id_discord_a)+"> <@"+str(id_discord_b)+"> ["+str(nm_juego)+"] "+str(days_hr[id_dia])
+                    message = "```ansi\n\u001b[0;34mTENEMOS DUELO CONFIRMADO\u001b[0m\n```\n<@"+str(id_discord_a)+"> <@"+str(id_discord_b)+"> ["+str(nm_juego)+"] "+str(days_hr[id_dia])
                     await challenge_channel.send(message)
                 else:
                     await interaction.response.send_message("Este día ya tiene "+str(maxRetasDia)+" duelos o más programados.")
