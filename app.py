@@ -62,7 +62,7 @@ async def on_ready():
 async def on_raw_reaction_add(payload):
     id_user = int(payload.user_id)
     id_message = int(payload.message_id)
-    id_emoji = int(payload.emoji.id)
+    id_emoji = None if not payload.emoji.id else int(payload.emoji.id)
     guild = bot.get_guild(payload.guild_id)
     if id_message==msg_platform:
         user = await guild.fetch_member(id_user)
@@ -86,6 +86,28 @@ async def on_raw_reaction_add(payload):
         elif id_emoji==int(os.environ['NPL_EMO_2XKO']):
             role = discord.utils.get(guild.roles,name="2XKO")
             await user.add_roles(role)
+    elif (int(payload.channel_id)==int(os.environ["NPL_CNL_CHALLENGE"])):
+        # Esta reaccion borra duelos en el canal de duelos-confirmados
+        user = await guild.fetch_member(id_user)
+        role = discord.utils.get(guild.roles,name="Nopalote")
+        if (role in user.roles and payload.emoji.name=='\u2705'):
+            message_ob = await bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
+            if not "TENEMOS DUELO CONFIRMADO" in message_ob.content:
+                return
+            if not len(message_ob.mentions)==2:
+                return
+            id_discord_a = int(message_ob.mentions[0].id)
+            id_discord_b = int(message_ob.mentions[1].id)
+            last_word = str.lower(remove_accents(message_ob.content.split()[-1]))
+            if not last_word in days_ascii:
+                return
+            id_dia = days_ascii.index(last_word)
+            db_con = sqlite3.connect(db_pth)
+            db_cur = db_con.cursor()
+            db_cur.execute("delete from duelos where id_dia=? and ((id_discord_a=? and id_discord_b=?) or (id_discord_a=? and id_discord_b=?))",(id_dia,id_discord_a,id_discord_b,id_discord_b,id_discord_a))
+            db_con.commit()
+            db_con.close()
+            await message_ob.delete()
 
 
 
@@ -94,7 +116,7 @@ async def on_raw_reaction_add(payload):
 async def on_raw_reaction_remove(payload):
     id_user = int(payload.user_id)
     id_message = int(payload.message_id)
-    id_emoji = int(payload.emoji.id)
+    id_emoji = None if not payload.emoji.id else int(payload.emoji.id)
     guild = bot.get_guild(payload.guild_id)
     if id_message==msg_platform:
         user = await guild.fetch_member(id_user)
@@ -169,6 +191,44 @@ async def tekken_id(context, arg: str|None):
 
 
 
+# Comando para matar todos los duelos
+@bot.command(name="clear-all")
+async def clear_all(context):
+    db_con = sqlite3.connect(db_pth)
+    db_cur = db_con.cursor()
+    channel = bot.get_channel(context.message.channel.id)
+    db_cur.execute("delete from duelos")
+    db_con.commit()
+    db_con.close()
+    await channel.send("Todas los duelos han sido eliminados.")
+
+# Comando para desplegar todos los duelos
+@bot.command(name="calendario")
+async def calendario(context):
+    channel = bot.get_channel(context.message.channel.id)
+    db_con = sqlite3.connect(db_pth)
+    db_cur = db_con.cursor()
+    db_cur.execute("select distinct id_dia from duelos order by id_dia")
+    db_res = [xx[0] for xx in db_cur.fetchall()]
+    if len(db_res)>0:
+        cal = discord.Embed(
+            type='rich',
+            colour=discord.Colour.blue(),
+            title="Duelos Programados"
+        )
+        for id_dia in db_res:
+            db_cur.execute("select id_discord_a,id_discord_b from duelos where id_dia=?",(id_dia,))
+            duelos = ["<@"+str(ss[0])+"> versus <@"+str(ss[1])+">" for ss in db_cur.fetchall()]
+            cal.add_field(name=days_hr[id_dia],value="\n".join(duelos),inline=False)
+        mention_config = {"everyone":False,"users":False}
+        await channel.send(embed=cal,allowed_mentions=discord.AllowedMentions(**mention_config))
+    else:
+        await channel.send("No hay duelos confirmados en la base de datos.")
+        
+    
+
+
+
 # Comando !ft, por ahora solo reacciona en el canal #tekken
 @bot.command(name="ft")
 async def ft(context, *args):
@@ -180,8 +240,8 @@ async def ft(context, *args):
     channel = bot.get_channel(id_channel)
     id_discord_a = int(context.author.id)
     valid_channels = [int(os.environ["NPL_CNL_TEKKEN8"])]
+    valid_games = ["TEKKEN 8"]
     valid_days = days_ascii
-    print(args)
 
     # Terminamos este comando si no esta en un canal valido o si no retamos a alguien valido
     if (not id_channel in valid_channels):
@@ -211,9 +271,12 @@ async def ft(context, *args):
             return
         else:
             id_dia = valid_days.index(dia_sem)
+        # Finalmente determinamos el juego
+        id_juego = valid_channels.index(id_channel)
+        nm_juego = valid_games[id_juego]
 
     # Revisamos que no tengas reta ese dia
-    db_cur.execute("select id_dia,juego from retas where id_dia=? and (id_discord_a=? or id_discord_b=?)",(id_dia,id_discord_a,id_discord_a))
+    db_cur.execute("select id_dia,juego from duelos where id_dia=? and (id_discord_a=? or id_discord_b=?)",(id_dia,id_discord_a,id_discord_a))
     db_res = db_cur.fetchall()
     if (len(db_res)>0):
         message = "<@"+str(id_discord_a)+"> "+"Ya tienes una reta ese día."
@@ -221,8 +284,9 @@ async def ft(context, *args):
         return
  
     # Revisamos que tu oponente
-    db_cur.execute("select id_dia,juego from retas where id_dia=? and (id_discord_a=? or id_discord_b=?)",(id_dia,id_discord_b,id_discord_b))
+    db_cur.execute("select id_dia,juego from duelos where id_dia=? and (id_discord_a=? or id_discord_b=?)",(id_dia,id_discord_b,id_discord_b))
     db_res = db_cur.fetchall()
+    db_con.close()
     if (len(db_res)>0):
         message = "<@"+str(id_discord_a)+"> "+"Tu oponente <@"+id_discord_b+"> ya tiene una reta ese día."
         await channel.send(message)
@@ -233,41 +297,58 @@ async def ft(context, *args):
     member = context.guild.get_member(id_discord_b)
     for ele in current_blocks:
         role = discord.utils.get(context.guild.roles,name=ele)
-        print(role)
-        print(member.roles)
         if role in member.roles:
-            print(role)
             message = "<@"+str(id_discord_a)+"> "+"Tu oponente <@"+str(id_discord_b)+"> tiene un rol que bloquea ese día."
             await channel.send(message)
             return
 
-    # Emite el reto
+    # Construccion del mensaje de reto
     challenge_channel = bot.get_channel(int(os.environ['NPL_CNL_CHALLENGE']))
-    message =  "<@"+str(id_discord_a)+"> "+"ha retado a un FT a <@"+str(id_discord_b)+"> para el día "+str.lower(days_hr[id_dia])
-    await challenge_channel.send(message)
+    message =  "<@"+str(id_discord_a)+"> "+"ha retado a un FT a <@"+str(id_discord_b)+">"
+    invite = discord.Embed(
+        type='rich',
+        colour=discord.Colour.blue(),
+        title="DUELO PARA EL DÍA "+str.upper(days_hr[id_dia]),
+        description="¿Aceptas el reto, <@"+str(id_discord_b)+">?"
+    )
+    invite.set_author(name=nm_juego)
+
+    # Botones de reto
+    maxRetasDia = 3
+    class ChallengeView(discord.ui.View):
+        @discord.ui.button(label="Aceptar", style=discord.ButtonStyle.green,row=0)
+        async def button_accept_callback(self, interaction, button):
+            pusher = int(interaction.user.id)
+            if (pusher==id_discord_b):
+                db_con = sqlite3.connect(db_pth)
+                db_cur = db_con.cursor()
+                db_cur.execute("select id_dia,id_discord_a,id_discord_b,juego from duelos where id_dia=?",(id_dia,))
+                db_res = db_cur.fetchall()
+                if (len(db_res)<maxRetasDia):
+                    db_cur.execute("insert into duelos values (?,?,?,?)",(id_dia,id_discord_a,id_discord_b,nm_juego))
+                    db_con.commit()
+                    await interaction.message.delete()
+                    message = "`TENEMOS DUELO CONFIRMADO`\n<@"+str(id_discord_a)+"> <@"+str(id_discord_b)+"> ["+str(nm_juego)+"] "+str(days_hr[id_dia])
+                    await challenge_channel.send(message)
+                else:
+                    await interaction.response.send_message("Este día ya tiene "+str(maxRetasDia)+" duelos o más programados.")
+            else:
+                return
+        @discord.ui.button(label="Rechazar", style=discord.ButtonStyle.red,row=0)
+        async def button_reject_callback(self, interaction, button):
+            pusher = int(interaction.user.id)
+            if (pusher==id_discord_b):
+                await interaction.message.delete()
+            else:
+                return
+
+    # Emite el reto
+    await challenge_channel.send(content=message,embed=invite,view=ChallengeView())
 
 
 
 
 
-
-
-
-    # Creamos el mensaje en el canal de confirmacion
-    conf_channel = int(os.environ["NPL_CNL_CHALLENGE"])
-
-    print(message)
-
-
-
-
-
-
-
-
-
-
-    
 
 
 

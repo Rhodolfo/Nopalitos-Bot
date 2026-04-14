@@ -1,1 +1,6 @@
 Aqui va el archivo SQLite nopalitos.db
+
+Estructura: 
+
+CREATE TABLE ids_tekken (id_discord,id_tekken)
+CREATE TABLE duelos (id_dia,id_discord_a,id_discord_b,juego)
