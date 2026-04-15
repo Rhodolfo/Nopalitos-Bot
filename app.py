@@ -40,7 +40,7 @@ blocks = [
 
 
 # Extrae discord id de usuario directamente de un mention
-def convert_mention_to_id(mention):
+def convert_mention_to_id(mention: str):
     return int(mention[1:][:len(mention)-2].replace("@","").replace("!",""))
 
 # Quitamos acentos
@@ -64,7 +64,7 @@ async def on_ready():
 
 # Este evento se detona cuando alguien reacciona a un mensaje
 @bot.event
-async def on_raw_reaction_add(payload):
+async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
     id_user = int(payload.user_id)
     id_message = int(payload.message_id)
     id_emoji = None if not payload.emoji.id else int(payload.emoji.id)
@@ -118,7 +118,7 @@ async def on_raw_reaction_add(payload):
 
 # Este evento se detona cuando alguien quita una reaccion a un mensaje
 @bot.event
-async def on_raw_reaction_remove(payload):
+async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
     id_user = int(payload.user_id)
     id_message = int(payload.message_id)
     id_emoji = None if not payload.emoji.id else int(payload.emoji.id)
@@ -239,7 +239,7 @@ async def calendario(context: discord.ext.commands.Context):
 
 # Comando !ft, por ahora solo reacciona en el canal #tekken
 @bot.command(name="ft")
-async def ft(context: discord.ext.commands.Context, *args):
+async def ft(context: discord.ext.commands.Context, *args: str):
 
     # Declaraciones iniciales para todas las opciones
     db_con = sqlite3.connect(db_pth)
@@ -325,7 +325,7 @@ async def ft(context: discord.ext.commands.Context, *args):
     maxRetasDia = 3
     class ChallengeView(discord.ui.View):
         @discord.ui.button(label="Aceptar", style=discord.ButtonStyle.green,row=0)
-        async def button_accept_callback(self, interaction, button):
+        async def button_accept_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
             print("Aceptando duelo")
             mentions = interaction.message.mentions
             id_a = interaction.message.mentions[0].id
@@ -360,7 +360,7 @@ async def ft(context: discord.ext.commands.Context, *args):
             else:
                 return
         @discord.ui.button(label="Rechazar", style=discord.ButtonStyle.red,row=0)
-        async def button_reject_callback(self, interaction, button):
+        async def button_reject_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
             print("Rechazando duelo")
             mentions = interaction.message.mentions
             id_a = interaction.message.mentions[0].id
@@ -391,7 +391,7 @@ async def ft(context: discord.ext.commands.Context, *args):
 
 @bot.command(name="ft-force")
 @commands.has_role("Nopalote")
-async def ft_force(context,*args):
+async def ft_force(context: discord.ext.commands.Context,*args: str):
 
     # Declaraciones iniciales para todas las opciones
     db_con = sqlite3.connect(db_pth)
@@ -455,7 +455,7 @@ async def ft_force(context,*args):
     maxRetasDia = 100
     class ChallengeView(discord.ui.View):
         @discord.ui.button(label="Aceptar", style=discord.ButtonStyle.green,row=0)
-        async def button_accept_callback(self, interaction, button):
+        async def button_accept_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
             print("Aceptando duelo")
             mentions = interaction.message.mentions
             id_a = interaction.message.mentions[0].id
@@ -470,7 +470,6 @@ async def ft_force(context,*args):
                 id_endr = int(id_a)
             pusher = int(interaction.user.id)
             game = str(interaction.message.embeds[0].author.name)
-
             print("Game: "+str(game))
             print("Init: "+str(id_init))
             print("Endr: "+str(id_endr))
@@ -491,7 +490,7 @@ async def ft_force(context,*args):
             else:
                 return
         @discord.ui.button(label="Rechazar", style=discord.ButtonStyle.red,row=0)
-        async def button_reject_callback(self, interaction, button):
+        async def button_reject_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
             print("Rechazando duelo")
             mentions = interaction.message.mentions
             id_a = interaction.message.mentions[0].id
