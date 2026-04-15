@@ -1,10 +1,13 @@
 # Jalamos librerias
 from discord.ext import commands
+from bs4 import BeautifulSoup
+from bs4 import element
 import discord
 import os 
 import sqlite3
 import re
 import unicodedata
+import requests
 
 
 
@@ -40,11 +43,13 @@ def convert_mention_to_id(mention):
     return int(mention[1:][:len(mention)-2].replace("@","").replace("!",""))
 
 # Quitamos acentos
-def remove_accents(input_str):
+def remove_accents(input_str: str):
     # NFD decomposes characters into their base and combining marks
     nfkd_form = unicodedata.normalize('NFD', input_str)
     # Filter out characters that are "combining marks" (category 'Mn')
     return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
+
+# Dias de la semana en formato ASCIII
 days_ascii = [str.lower(remove_accents(ss)) for ss in days_hr]
  
 
@@ -53,7 +58,6 @@ days_ascii = [str.lower(remove_accents(ss)) for ss in days_hr]
 @bot.event
 async def on_ready():
     print("Nopalibot en consola listo!")
-    pass
 
 
 
@@ -145,7 +149,7 @@ async def on_raw_reaction_remove(payload):
 
 # Comando !tekken-id
 @bot.command(name="tekken-id")
-async def tekken_id(context, arg: str|None):
+async def tekken_id(context: discord.ext.commands.Context, arg: str|None):
 
     # Declaraciones iniciales para todas las opciones
     db_con = sqlite3.connect(db_pth)
@@ -193,7 +197,8 @@ async def tekken_id(context, arg: str|None):
 
 # Comando para matar todos los duelos
 @bot.command(name="clear-all")
-async def clear_all(context):
+async def clear_all(context: discord.ext.commands.Context):
+    return
     db_con = sqlite3.connect(db_pth)
     db_cur = db_con.cursor()
     channel = bot.get_channel(context.message.channel.id)
@@ -204,7 +209,7 @@ async def clear_all(context):
 
 # Comando para desplegar todos los duelos
 @bot.command(name="calendario")
-async def calendario(context):
+async def calendario(context: discord.ext.commands.Context):
     channel = bot.get_channel(context.message.channel.id)
     db_con = sqlite3.connect(db_pth)
     db_cur = db_con.cursor()
@@ -231,7 +236,7 @@ async def calendario(context):
 
 # Comando !ft, por ahora solo reacciona en el canal #tekken
 @bot.command(name="ft")
-async def ft(context, *args):
+async def ft(context: discord.ext.commands.Context, *args):
 
     # Declaraciones iniciales para todas las opciones
     db_con = sqlite3.connect(db_pth)
@@ -369,10 +374,55 @@ async def ft(context, *args):
 
 
 
+# Comando para extraer data del wavy wank
+@bot.command(name="wavu-wank")
+async def wavu_wank(context: discord.ext.commands.Context,arg: str|None):
+
+    # Extraccion de id de tekken
+    print("!wavu-wank")
 
 
+    id_tekken = "2QH3fjmFbrtd"
 
+    # Obten datos de wavu
+    paginaURL = "https://wank.wavu.wiki/player/"+str(id_tekken)
+    print("Obteniendo datos de "+str(paginaURL))
+    xx = context.channel.send("Obteniendo información de PLACEHOLDER PLACEHOLDER")
+    await xx
+    paginaCruda = requests.get(paginaURL)
+    paginaProcesada = BeautifulSoup(paginaCruda.text,"html.parser")
 
+    # Jala el carrusel de rankings
+    carrusel = paginaProcesada.find(attrs={"class":"player-ratings"})
+    if not carrusel:
+        print("Datos de wavu han fallado al buscar el carrusel")
+        return
+
+    # Crea bloque de codigo para el rating de un solo personaje en Wavu
+    def build_code_block(rating: element.Tag):
+        def make_blue(ss: str):
+            return "\u001b[0;34m"+ss+"\u001b[0m"
+        def make_red(ss: str):
+            return "\u001b[0;31m"+ss+"\u001b[0m"
+        def make_ints_blue(ss: str):
+            return " ".join([make_blue(xx) if re.search(r"^\d",xx) else xx for xx in ss.split()])
+        dude = rating.find(attrs={"class":"char"}).getText().lstrip().rstrip()
+        mu = rating.find(attrs={"class":"mu"}).getText().lstrip().rstrip()
+        sigma = rating.find(attrs={"class":"sigma"}).getText().lstrip().rstrip()
+        games = rating.find(attrs={"class":"games"}).getText().lstrip().rstrip()
+        seen = rating.find(attrs={"class":"last-seen"}).getText().lstrip().rstrip()
+        return "```ansi\n"+("\n".join([make_red(dude),make_ints_blue(mu),make_ints_blue(sigma),make_ints_blue(games),make_ints_blue(seen)]))+"```"
+
+    # Manda nombre
+    nombre = paginaProcesada.find(attrs={"class":"player-header"}).find(attrs={"class":"name"}).getText().lstrip().rstrip()
+    await context.channel.send("```"+nombre+"```")
+
+    # Manda ratings
+    grupos = carrusel.find_all(attrs={"class":"rating-group"})
+    for grp in grupos:
+        label = grp.find(attrs={"class":"label"}).getText().lstrip().rstrip()
+        ss = " ".join([build_code_block(ss) for ss in grp.find_all(attrs={"class":"rating"})])
+        await context.channel.send("```"+label+"``` "+ss)
 
 
 
