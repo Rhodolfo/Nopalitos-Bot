@@ -523,15 +523,45 @@ async def ft_force(context: discord.ext.commands.Context,*args: str):
 @bot.command(name="wavu-wank")
 async def wavu_wank(context: discord.ext.commands.Context,arg: str|None):
 
+    # Extraccion de id de discord
+    if not arg:
+        print("!wavu-wank on self")
+        id_discord = context.author.id
+    elif bool(re.search("^....-....-....$",arg)):
+        print("!wavu-wank on tekken-id")
+        id_discord = None
+    elif bool(re.search("^<@.*?>$",arg)):
+        print("!wavu-wank on mention")
+        id_discord = convert_mention_to_id(arg)
+    else:
+        print("!wavu-wank failed on argument")
+        id_discord = context.author.id
+        await context.channel.send("<@"+id_discord+"> debes proporcionar una mención o un ID de tekken")
+        return
+ 
     # Extraccion de id de tekken
-    print("!wavu-wank")
-    id_tekken = "2QH3fjmFbrtd"
+    if not id_discord:
+        id_tekken = arg
+    else:
+        db_con = sqlite3.connect(db_pth)
+        db_cur = db_con.cursor()
+        db_cur.execute("select id_tekken from ids_tekken where id_discord=?",(id_discord,))
+        db_res = db_cur.fetchall()
+        db_con.close()
+        if len(db_res)>0:
+            id_tekken = str(db_res[0][0])
+        else:
+            context.channel.send("<@"+str(id_discord)+"> no tiene datos registrados para Tekken")
+            return
 
     # Obten datos de wavu
-    paginaURL = "https://wank.wavu.wiki/player/"+str(id_tekken)
+    table = str.maketrans("","","-")
+    paginaURL = "https://wank.wavu.wiki/player/"+str(id_tekken.translate(table))
     print("Obteniendo datos de "+str(paginaURL))
-    xx = context.channel.send("Obteniendo información de PLACEHOLDER PLACEHOLDER")
-    await xx
+    if not id_discord:
+        await context.channel.send("Obteniendo información de "+str(id_tekken))
+    else:
+        await context.channel.send("Obteniendo información de <@"+str(id_discord)+"> "+str(id_tekken))
     paginaCruda = requests.get(paginaURL)
     paginaProcesada = BeautifulSoup(paginaCruda.text,"html.parser")
 
@@ -554,7 +584,7 @@ async def wavu_wank(context: discord.ext.commands.Context,arg: str|None):
         sigma = rating.find(attrs={"class":"sigma"}).getText().lstrip().rstrip()
         games = rating.find(attrs={"class":"games"}).getText().lstrip().rstrip()
         seen = rating.find(attrs={"class":"last-seen"}).getText().lstrip().rstrip()
-        return "```ansi\n"+("\n".join([make_red(dude),make_ints_blue(mu),make_ints_blue(sigma),make_ints_blue(games),make_ints_blue(seen)]))+"```"
+        return "\n".join([make_red(dude),make_ints_blue(mu),make_ints_blue(sigma),make_ints_blue(games),make_ints_blue(seen)])
 
     # Manda nombre
     nombre = paginaProcesada.find(attrs={"class":"player-header"}).find(attrs={"class":"name"}).getText().lstrip().rstrip()
@@ -564,8 +594,9 @@ async def wavu_wank(context: discord.ext.commands.Context,arg: str|None):
     grupos = carrusel.find_all(attrs={"class":"rating-group"})
     for grp in grupos:
         label = grp.find(attrs={"class":"label"}).getText().lstrip().rstrip()
-        ss = " ".join([build_code_block(ss) for ss in grp.find_all(attrs={"class":"rating"})])
-        await context.channel.send("```"+label+"``` "+ss)
+        await context.channel.send("```"+label+"```")
+        for rating in grp.find_all(attrs={"class":"rating"}):
+            await context.channel.send("```ansi\n"+build_code_block(rating)+"```")
 
 
 
