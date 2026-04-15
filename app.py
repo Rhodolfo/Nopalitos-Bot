@@ -28,6 +28,7 @@ intents.members = True
 bot = commands.Bot(command_prefix="!",intents=intents)
 
 # Dias de la semana
+maxRetasDia = 3
 days_hr = ['Lunes','Martes','Miércoles','Jueves','Viernes']
 blocks = [
     ("ocupado-lunes","Duelo Confirmado Lunes"),
@@ -216,7 +217,8 @@ async def calendario(context: discord.ext.commands.Context):
     channel = bot.get_channel(context.message.channel.id)
     db_con = sqlite3.connect(db_pth)
     db_cur = db_con.cursor()
-    db_cur.execute("select distinct id_dia from duelos order by iif(id_dia<"+str(curday)+",id_dia,10+id_dia)")
+    query = "select id_dia from (select distinct id_dia as id_dia from duelos) order by iif(id_dia<"+str(curday)+",10+id_dia,id_dia)"
+    db_cur.execute(query)
     db_res = [xx[0] for xx in db_cur.fetchall()]
     if len(db_res)>0:
         cal = discord.Embed(
@@ -224,10 +226,29 @@ async def calendario(context: discord.ext.commands.Context):
             colour=discord.Colour.blue(),
             title="Duelos Programados"
         )
+        def add_separation(thick: bool):
+            if (thick):
+                cal.add_field(name="=====================",value="",inline=False)
+            else:
+                cal.add_field(name="~~-------------------------~~",value="",inline=False)
+            return
+        add_separation(True)
+        switch = False
         for id_dia in db_res:
             db_cur.execute("select id_discord_a,id_discord_b from duelos where id_dia=?",(id_dia,))
             duelos = [context.guild.get_member(int(ss[0])).display_name+" versus "+context.guild.get_member(int(ss[1])).display_name for ss in db_cur.fetchall()]
-            cal.add_field(name=days_hr[id_dia],value="\n".join(duelos),inline=False)
+            free = maxRetasDia - len(duelos)
+            if (free>1):
+                nameEmbed = days_hr[id_dia]+": "+str(free)+" duelos libres"
+            elif (free==1):
+                nameEmbed = days_hr[id_dia]+": 1 duelo libre"
+            else:
+                nameEmbed = days_hr[id_dia]+": Sin duelos libres"
+            if id_dia==0 and switch:
+                add_separation(False)
+            switch=True
+            cal.add_field(name=nameEmbed,value="\n".join(duelos),inline=False)
+        # add_separation(True)
         mention_config = {"everyone":False,"users":False}
         await channel.send(embed=cal,allowed_mentions=discord.AllowedMentions(**mention_config))
     else:
@@ -322,7 +343,6 @@ async def ft(context: discord.ext.commands.Context, *args: str):
     invite.set_author(name=nm_juego)
 
     # Botones de reto
-    maxRetasDia = 3
     class ChallengeView(discord.ui.View):
         @discord.ui.button(label="Aceptar", style=discord.ButtonStyle.green,row=0)
         async def button_accept_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -452,7 +472,7 @@ async def ft_force(context: discord.ext.commands.Context,*args: str):
     invite.set_author(name=nm_juego)
 
     # Botones de reto
-    maxRetasDia = 100
+    maxRetasDiaAdmin = 100
     class ChallengeView(discord.ui.View):
         @discord.ui.button(label="Aceptar", style=discord.ButtonStyle.green,row=0)
         async def button_accept_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -479,14 +499,14 @@ async def ft_force(context: discord.ext.commands.Context,*args: str):
                 db_cur = db_con.cursor()
                 db_cur.execute("select id_dia,id_discord_a,id_discord_b,juego from duelos where id_dia=?",(id_dia,))
                 db_res = db_cur.fetchall()
-                if (len(db_res)<maxRetasDia):
+                if (len(db_res)<maxRetasDiaAdmin):
                     db_cur.execute("insert into duelos values (?,?,?,?)",(id_dia,id_init,id_endr,game))
                     db_con.commit()
                     await interaction.message.delete()
                     message = "```ansi\n\u001b[0;34mTENEMOS DUELO CONFIRMADO\u001b[0m\n```\n<@"+str(id_discord_a)+"> <@"+str(id_discord_b)+"> ["+str(game)+"] "+str(days_hr[id_dia])
                     await challenge_channel.send(message)
                 else:
-                    await interaction.response.send_message("Este día ya tiene "+str(maxRetasDia)+" duelos o más programados.")
+                    await interaction.response.send_message("Este día ya tiene "+str(maxRetasDiaAdmin)+" duelos o más programados.")
             else:
                 return
         @discord.ui.button(label="Rechazar", style=discord.ButtonStyle.red,row=0)
