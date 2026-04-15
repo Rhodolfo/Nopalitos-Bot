@@ -2,6 +2,7 @@
 from discord.ext import commands
 from bs4 import BeautifulSoup
 from bs4 import element
+from datetime import datetime
 import discord
 import os 
 import sqlite3
@@ -197,6 +198,7 @@ async def tekken_id(context: discord.ext.commands.Context, arg: str|None):
 
 # Comando para matar todos los duelos
 @bot.command(name="clear-all")
+@commands.has_role("Nopalote")
 async def clear_all(context: discord.ext.commands.Context):
     return
     db_con = sqlite3.connect(db_pth)
@@ -210,10 +212,11 @@ async def clear_all(context: discord.ext.commands.Context):
 # Comando para desplegar todos los duelos
 @bot.command(name="calendario")
 async def calendario(context: discord.ext.commands.Context):
+    curday = datetime.now().weekday()
     channel = bot.get_channel(context.message.channel.id)
     db_con = sqlite3.connect(db_pth)
     db_cur = db_con.cursor()
-    db_cur.execute("select distinct id_dia from duelos order by id_dia")
+    db_cur.execute("select distinct id_dia from duelos order by iif(id_dia<"+str(curday)+",id_dia,10+id_dia)")
     db_res = [xx[0] for xx in db_cur.fetchall()]
     if len(db_res)>0:
         cal = discord.Embed(
@@ -223,7 +226,7 @@ async def calendario(context: discord.ext.commands.Context):
         )
         for id_dia in db_res:
             db_cur.execute("select id_discord_a,id_discord_b from duelos where id_dia=?",(id_dia,))
-            duelos = ["<@"+str(ss[0])+"> versus <@"+str(ss[1])+">" for ss in db_cur.fetchall()]
+            duelos = [context.guild.get_member(int(ss[0])).display_name+" versus "+context.guild.get_member(int(ss[1])).display_name for ss in db_cur.fetchall()]
             cal.add_field(name=days_hr[id_dia],value="\n".join(duelos),inline=False)
         mention_config = {"everyone":False,"users":False}
         await channel.send(embed=cal,allowed_mentions=discord.AllowedMentions(**mention_config))
@@ -324,12 +327,18 @@ async def ft(context: discord.ext.commands.Context, *args):
         @discord.ui.button(label="Aceptar", style=discord.ButtonStyle.green,row=0)
         async def button_accept_callback(self, interaction, button):
             print("Aceptando duelo")
-            member_init = interaction.message.mentions[0]
-            member_endr = interaction.message.mentions[1]
             mentions = interaction.message.mentions
+            id_a = interaction.message.mentions[0].id
+            id_b = interaction.message.mentions[1].id
+            dx_a = interaction.message.content.find(str(id_a))
+            dx_b = interaction.message.content.find(str(id_b))
+            if (dx_a<dx_b):
+                id_init = int(id_a)
+                id_endr = int(id_b)
+            else:
+                id_init = int(id_b)
+                id_endr = int(id_a)
             pusher = int(interaction.user.id)
-            id_init = int(member_init.id)
-            id_endr = int(member_endr.id)
             game = str(interaction.message.embeds[0].author.name)
             print("Game: "+str(game))
             print("Init: "+str(id_init))
@@ -353,12 +362,18 @@ async def ft(context: discord.ext.commands.Context, *args):
         @discord.ui.button(label="Rechazar", style=discord.ButtonStyle.red,row=0)
         async def button_reject_callback(self, interaction, button):
             print("Rechazando duelo")
-            member_init = interaction.message.mentions[0]
-            member_endr = interaction.message.mentions[1]
             mentions = interaction.message.mentions
+            id_a = interaction.message.mentions[0].id
+            id_b = interaction.message.mentions[1].id
+            dx_a = interaction.message.content.find(str(id_a))
+            dx_b = interaction.message.content.find(str(id_b))
+            if (dx_a<dx_b):
+                id_init = int(id_a)
+                id_endr = int(id_b)
+            else:
+                id_init = int(id_b)
+                id_endr = int(id_a)
             pusher = int(interaction.user.id)
-            id_init = int(member_init.id)
-            id_endr = int(member_endr.id)
             game = str(interaction.message.embeds[0].author.name)
             print("Game: "+str(game))
             print("Init: "+str(id_init))
@@ -370,7 +385,138 @@ async def ft(context: discord.ext.commands.Context, *args):
                 return
 
     # Emite el reto
-    await challenge_channel.send(content=message,embed=invite,view=ChallengeView())
+    await challenge_channel.send(content=message,embed=invite,view=ChallengeView(timeout=None))
+
+
+
+@bot.command(name="ft-force")
+@commands.has_role("Nopalote")
+async def ft_force(context,*args):
+
+    # Declaraciones iniciales para todas las opciones
+    db_con = sqlite3.connect(db_pth)
+    db_cur = db_con.cursor()
+    id_channel = int(context.message.channel.id)
+    channel = bot.get_channel(id_channel)
+    valid_channels = [int(os.environ["NPL_CNL_TEKKEN8"])]
+    valid_games = ["TEKKEN 8"]
+    valid_days = days_ascii
+
+    # Terminamos este comando si no esta en un canal valido o si no retamos a alguien valido
+    if (not id_channel in valid_channels):
+        return
+    elif not len(args)>0 or not bool(re.search("^<@.*?>$",args[0])):
+        message = "Este comando requiere tres argumentos: dos menciones y un dia."
+        await channel.send(message)
+        return
+    elif not len(args)>1 or not bool(re.search("^<@.*?>$",args[1])):
+        message = "Este comando requiere tres argumentos: dos menciones y un dia."
+        await channel.send(message)
+        return
+    elif not len(args)>2:
+        message = "Este comando requiere que especifiques el día que quieres retar."
+        await channel.send(message)
+        return
+    else:
+        # El retador
+        id_discord_a = convert_mention_to_id(args[0])
+        # Declaramos id_discord_b ya que pasamos los checks, checamos que no sea autoreta
+        id_discord_b = convert_mention_to_id(args[1])
+        if id_discord_b==id_discord_a:
+            message = "<@"+str(id_discord_a)+"> "+"No puedes retarte a ti mismo"
+            await channel.send(message)
+            return
+        # Terminamos si el dia de la semana no es valido
+        dia_sem = str.lower(remove_accents(args[2]))
+        if not dia_sem in valid_days:
+            message = "<@"+str(id_discord_a)+"> "+"Día de la semana no válido."
+            await channel.send(message)
+            return
+        else:
+            id_dia = valid_days.index(dia_sem)
+        # Finalmente determinamos el juego
+        id_juego = valid_channels.index(id_channel)
+        nm_juego = valid_games[id_juego]
+
+    # Construccion del mensaje de reto
+    challenge_channel = bot.get_channel(int(os.environ['NPL_CNL_CHALLENGE']))
+    message =  "<@"+str(id_discord_a)+"> "+"ha retado a un FT a <@"+str(id_discord_b)+">"
+    invite = discord.Embed(
+        type='rich',
+        colour=discord.Colour.blue(),
+        title="DUELO PARA EL DÍA "+str.upper(days_hr[id_dia]),
+        description="¿Aceptas el reto, <@"+str(id_discord_b)+">?"
+    )
+    invite.set_image(url=str(os.environ["NPL_IMG_CHALLENGE"]))
+    invite.set_thumbnail(url=str(os.environ["NPL_IMG_CHALLTHMB"]))
+    invite.set_author(name=nm_juego)
+
+    # Botones de reto
+    maxRetasDia = 100
+    class ChallengeView(discord.ui.View):
+        @discord.ui.button(label="Aceptar", style=discord.ButtonStyle.green,row=0)
+        async def button_accept_callback(self, interaction, button):
+            print("Aceptando duelo")
+            mentions = interaction.message.mentions
+            id_a = interaction.message.mentions[0].id
+            id_b = interaction.message.mentions[1].id
+            dx_a = interaction.message.content.find(str(id_a))
+            dx_b = interaction.message.content.find(str(id_b))
+            if (dx_a<dx_b):
+                id_init = int(id_a)
+                id_endr = int(id_b)
+            else:
+                id_init = int(id_b)
+                id_endr = int(id_a)
+            pusher = int(interaction.user.id)
+            game = str(interaction.message.embeds[0].author.name)
+
+            print("Game: "+str(game))
+            print("Init: "+str(id_init))
+            print("Endr: "+str(id_endr))
+            print("Push: "+str(pusher))
+            if (pusher==id_endr):
+                db_con = sqlite3.connect(db_pth)
+                db_cur = db_con.cursor()
+                db_cur.execute("select id_dia,id_discord_a,id_discord_b,juego from duelos where id_dia=?",(id_dia,))
+                db_res = db_cur.fetchall()
+                if (len(db_res)<maxRetasDia):
+                    db_cur.execute("insert into duelos values (?,?,?,?)",(id_dia,id_init,id_endr,game))
+                    db_con.commit()
+                    await interaction.message.delete()
+                    message = "```ansi\n\u001b[0;34mTENEMOS DUELO CONFIRMADO\u001b[0m\n```\n<@"+str(id_discord_a)+"> <@"+str(id_discord_b)+"> ["+str(game)+"] "+str(days_hr[id_dia])
+                    await challenge_channel.send(message)
+                else:
+                    await interaction.response.send_message("Este día ya tiene "+str(maxRetasDia)+" duelos o más programados.")
+            else:
+                return
+        @discord.ui.button(label="Rechazar", style=discord.ButtonStyle.red,row=0)
+        async def button_reject_callback(self, interaction, button):
+            print("Rechazando duelo")
+            mentions = interaction.message.mentions
+            id_a = interaction.message.mentions[0].id
+            id_b = interaction.message.mentions[1].id
+            dx_a = interaction.message.content.find(str(id_a))
+            dx_b = interaction.message.content.find(str(id_b))
+            if (dx_a<dx_b):
+                id_init = int(id_a)
+                id_endr = int(id_b)
+            else:
+                id_init = int(id_b)
+                id_endr = int(id_a)
+            pusher = int(interaction.user.id)
+            game = str(interaction.message.embeds[0].author.name)
+            print("Game: "+str(game))
+            print("Init: "+str(id_init))
+            print("Endr: "+str(id_endr))
+            print("Push: "+str(pusher))
+            if (pusher==id_endr):
+                await interaction.message.delete()
+            else:
+                return
+
+    # Emite el reto
+    await challenge_channel.send(content=message,embed=invite,view=ChallengeView(timeout=None))
 
 
 
@@ -380,8 +526,6 @@ async def wavu_wank(context: discord.ext.commands.Context,arg: str|None):
 
     # Extraccion de id de tekken
     print("!wavu-wank")
-
-
     id_tekken = "2QH3fjmFbrtd"
 
     # Obten datos de wavu
@@ -427,4 +571,3 @@ async def wavu_wank(context: discord.ext.commands.Context,arg: str|None):
 
 
 bot.run(bot_token)
-
