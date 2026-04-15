@@ -5,6 +5,7 @@ import os
 import sqlite3
 import re
 import unicodedata
+from datetime import datetime
 
 
 
@@ -205,10 +206,11 @@ async def clear_all(context):
 # Comando para desplegar todos los duelos
 @bot.command(name="calendario")
 async def calendario(context):
+    curday = datetime.now().weekday()
     channel = bot.get_channel(context.message.channel.id)
     db_con = sqlite3.connect(db_pth)
     db_cur = db_con.cursor()
-    db_cur.execute("select distinct id_dia from duelos order by id_dia")
+    db_cur.execute("select distinct id_dia from duelos order by iif(id_dia<"+str(curday)+",id_dia,10+id_dia)")
     db_res = [xx[0] for xx in db_cur.fetchall()]
     if len(db_res)>0:
         cal = discord.Embed(
@@ -218,7 +220,7 @@ async def calendario(context):
         )
         for id_dia in db_res:
             db_cur.execute("select id_discord_a,id_discord_b from duelos where id_dia=?",(id_dia,))
-            duelos = ["<@"+str(ss[0])+"> versus <@"+str(ss[1])+">" for ss in db_cur.fetchall()]
+            duelos = [context.guild.get_member(int(ss[0])).display_name+" versus "+context.guild.get_member(int(ss[1])).display_name for ss in db_cur.fetchall()]
             cal.add_field(name=days_hr[id_dia],value="\n".join(duelos),inline=False)
         mention_config = {"everyone":False,"users":False}
         await channel.send(embed=cal,allowed_mentions=discord.AllowedMentions(**mention_config))
