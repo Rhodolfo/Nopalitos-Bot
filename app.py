@@ -539,29 +539,36 @@ async def ft_force(context: discord.ext.commands.Context,*args: str):
 
 
 
-# Comando para extraer data del wavy wank
+# Comando para extraer data del wavu wank
 @bot.command(name="wavu-wank")
-async def wavu_wank(context: discord.ext.commands.Context,arg: str|None):
+async def wavu_wank(context: discord.ext.commands.Context,*args: str|None):
+
+    # Solo obtiene los mains por default
+    maxBlocks = 1
 
     # Extraccion de id de discord
-    if not arg:
+    if not args or not len(args)>0:
         print("!wavu-wank on self")
         id_discord = context.author.id
-    elif bool(re.search("^....-....-....$",arg)):
+    elif bool(re.search("^....-....-....$",args[0])):
         print("!wavu-wank on tekken-id")
         id_discord = None
-    elif bool(re.search("^<@.*?>$",arg)):
+    elif bool(re.search("^<@.*?>$",args[0])):
         print("!wavu-wank on mention")
-        id_discord = convert_mention_to_id(arg)
+        id_discord = convert_mention_to_id(args[0])
+    elif bool(re.search(r"^\d$",args[0])):
+        print("!wavu-wank on self")
+        id_discord = context.author.id
+        maxBlocks = int(args[0])
     else:
         print("!wavu-wank failed on argument")
         id_discord = context.author.id
-        await context.channel.send("<@"+id_discord+"> debes proporcionar una mención o un ID de tekken")
+        await context.channel.send("<@"+str(id_discord)+"> debes proporcionar una mención o un ID de tekken")
         return
  
     # Extraccion de id de tekken
     if not id_discord:
-        id_tekken = arg
+        id_tekken = args[0]
     else:
         db_con = sqlite3.connect(db_pth)
         db_cur = db_con.cursor()
@@ -573,6 +580,10 @@ async def wavu_wank(context: discord.ext.commands.Context,arg: str|None):
         else:
             context.channel.send("<@"+str(id_discord)+"> no tiene datos registrados para Tekken")
             return
+
+    # Determinamos si queremos todo wavu
+    if args and len(args)>1 and bool(re.search(r"^\d$",args[1])):
+        maxBlocks = int(args[1])
 
     # Obten datos de wavu
     table = str.maketrans("","","-")
@@ -612,11 +623,25 @@ async def wavu_wank(context: discord.ext.commands.Context,arg: str|None):
 
     # Manda ratings
     grupos = carrusel.find_all(attrs={"class":"rating-group"})
+    hasPrinted = False
     for grp in grupos:
         label = grp.find(attrs={"class":"label"}).getText().lstrip().rstrip()
-        await context.channel.send("```"+label+"```")
-        for rating in grp.find_all(attrs={"class":"rating"}):
-            await context.channel.send("```ansi\n"+build_code_block(rating)+"```")
+        printThis = False
+        if maxBlocks>=3:
+            printThis = True
+        elif maxBlocks==2:
+            printThis = not bool(re.search("provisional",str.lower(label))) or not hasPrinted
+        elif maxBlocks<=1:
+            printThis = bool(re.search("leaderboard",str.lower(label))) or not hasPrinted
+        else:
+            printThis = False
+        ratings = grp.find_all(attrs={"class":"rating"})
+        if (printThis and len(ratings)>0):
+            await context.channel.send("```"+label+"```")
+            for rating in ratings:
+                await context.channel.send("```ansi\n"+build_code_block(rating)+"```")
+                hasPrinted = True
+    print("Fin de !wavu-wank")
 
 
 

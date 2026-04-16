@@ -1,6 +1,6 @@
 Python version 3.12 (la que sea).
 
-El bot requiere la variables de ambiente para operar, se incluyen ejemplos dentro de resources/env.
+El bot requiere variables de ambiente para operar, se incluyen ejemplos dentro de resources/env.
 
 Por otro lado, se requiere el archivo nopalitos.db, este no va en el repo.
 
