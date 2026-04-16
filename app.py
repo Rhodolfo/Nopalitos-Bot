@@ -540,7 +540,7 @@ async def ft_force(context: discord.ext.commands.Context,*args: str):
 
 
 # Comando para extraer data del wavu wank
-@bot.command(name="wavu-test")
+@bot.command(name="wavu-wank")
 async def wavu_wank(context: discord.ext.commands.Context,*args: str|None):
 
     # Solo obtiene los mains por default
