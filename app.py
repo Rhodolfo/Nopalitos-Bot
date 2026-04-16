@@ -540,7 +540,7 @@ async def ft_force(context: discord.ext.commands.Context,*args: str):
 
 
 # Comando para extraer data del wavu wank
-@bot.command(name="wavu-wank")
+@bot.command(name="wavu-test")
 async def wavu_wank(context: discord.ext.commands.Context,*args: str|None):
 
     # Solo obtiene los mains por default
@@ -593,8 +593,9 @@ async def wavu_wank(context: discord.ext.commands.Context,*args: str|None):
         await context.channel.send("Obteniendo información de "+str(id_tekken))
     else:
         await context.channel.send("Obteniendo información de <@"+str(id_discord)+"> "+str(id_tekken))
-    paginaCruda = requests.get(paginaURL)
-    paginaProcesada = BeautifulSoup(paginaCruda.text,"html.parser")
+    paginaCruda = requests.get(paginaURL,params={'limit':'1'})
+    print(paginaCruda)
+    paginaProcesada = BeautifulSoup(paginaCruda.content,"html.parser",)
 
     # Jala el carrusel de rankings
     carrusel = paginaProcesada.find(attrs={"class":"player-ratings"})
