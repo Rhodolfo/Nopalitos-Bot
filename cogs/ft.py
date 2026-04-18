@@ -78,10 +78,15 @@ class FtCog(commands.Cog):
         # Vamos a revisar que el retado no tenga dias bloqueados
         current_blocks = self.bot.vars["blocks"][id_dia]
         member = context.guild.get_member(id_discord_b)
+        member_nopalibot = context.guild.get_member(self.bot.user.id)
         for ele in current_blocks:
             role = discord.utils.get(context.guild.roles,name=ele)
             if role in member.roles:
                 message = "<@"+str(id_discord_a)+"> "+"Tu oponente <@"+str(id_discord_b)+"> tiene un rol que bloquea ese día."
+                await context.channel.send(message)
+                return
+            if role in member_nopalibot.roles:
+                message = "<@"+str(id_discord_a)+"> "+"Este día esta bloqueado para todos."
                 await context.channel.send(message)
                 return
 
