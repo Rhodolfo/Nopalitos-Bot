@@ -108,6 +108,12 @@ class FtForceCog(commands.Cog):
                     if (len(db_res)<maxRetasDiaAdmin):
                         db_cur.execute("insert into duelos values (?,?,?,?)",(id_dia,id_init,id_endr,game))
                         db_con.commit()
+                        member_init = await interaction.guild.fetch_member(id_init)
+                        member_endr = await interaction.guild.fetch_member(id_endr)
+                        role_name = "Duelo Confirmado "+remove_accents(str(days_hr[id_dia]))
+                        role_objt = discord.utils.get(interaction.guild.roles,name=role_name)
+                        await member_init.add_roles(role_objt)
+                        await member_endr.add_roles(role_objt)
                         await interaction.message.delete()
                         message = "```ansi\n\u001b[0;34mTENEMOS DUELO CONFIRMADO\u001b[0m\n```\n<@"+str(id_discord_a)+"> <@"+str(id_discord_b)+"> ["+str(game)+"] "+str(days_hr[id_dia])
                         await challenge_channel.send(message)

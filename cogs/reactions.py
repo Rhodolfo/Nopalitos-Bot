@@ -59,6 +59,17 @@ class ReactionsCog(commands.Cog):
                 if not last_word in days_ascii:
                     return
                 id_dia = days_ascii.index(last_word)
+                # Quita roles de duelo del dia
+                member_a = await guild.fetch_member(id_discord_a)
+                member_b = await guild.fetch_member(id_discord_b)
+                dia_str = self.bot.vars["days_hr"][id_dia]
+                role_name_1 = "Duelo Confirmado "+remove_accents(str(dia_str))
+                role_objt_1 = discord.utils.get(guild.roles,name=role_name_1)
+                role_name_2 = "Retador "+remove_accents(str(dia_str))
+                role_objt_2 = discord.utils.get(guild.roles,name=role_name_2)
+                await member_a.remove_roles(role_objt_1,role_objt_2)
+                await member_b.remove_roles(role_objt_1,role_objt_2)
+                # Quita match de la base de datos
                 db_con = sqlite3.connect(os.getenv("NPL_DB_PATH"))
                 db_cur = db_con.cursor()
                 db_cur.execute("delete from duelos where id_dia=? and ((id_discord_a=? and id_discord_b=?) or (id_discord_a=? and id_discord_b=?))",(id_dia,id_discord_a,id_discord_b,id_discord_b,id_discord_a))
