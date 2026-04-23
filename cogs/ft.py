@@ -10,7 +10,11 @@ import unicodedata
 # Cog para el commando ft
 class FtCog(commands.Cog):
     def __init__(self, bot):
+        self.valid_channels = [int(os.environ["NPL_CNL_TEKKEN8"])]
+        self.valid_games = ["TEKKEN 8"]
         self.bot = bot
+
+
 
     # Comando ft
     @commands.command(name="ft")
@@ -21,14 +25,11 @@ class FtCog(commands.Cog):
         db_cur = db_con.cursor()
         id_channel = int(context.message.channel.id)
         id_discord_a = int(context.author.id)
-        valid_channels = [int(os.environ["NPL_CNL_TEKKEN8"])]
-        valid_games = ["TEKKEN 8"]
         valid_days = self.bot.vars["days_ascii"]
         days_hr = self.bot.vars["days_hr"]
-        maxRetasDia = self.bot.vars["max_retas_dia"]
 
         # Terminamos este comando si no esta en un canal valido o si no retamos a alguien valido
-        if (not id_channel in valid_channels):
+        if (not id_channel in self.valid_channels):
             print("!ft llamado en canal invalido")
             return
         elif not len(args)>0 or not bool(re.search("^<@.*?>$",args[0])):
@@ -55,8 +56,8 @@ class FtCog(commands.Cog):
             else:
                 id_dia = valid_days.index(dia_sem)
             # Finalmente determinamos el juego
-            id_juego = valid_channels.index(id_channel)
-            nm_juego = valid_games[id_juego]
+            id_juego = self.valid_channels.index(id_channel)
+            nm_juego = self.valid_games[id_juego]
 
         # Revisamos que no tengas reta ese dia
         db_cur.execute("select id_dia,juego from duelos where id_dia=? and (id_discord_a=? or id_discord_b=?)",(id_dia,id_discord_a,id_discord_a))
@@ -82,13 +83,25 @@ class FtCog(commands.Cog):
         for ele in current_blocks:
             role = discord.utils.get(context.guild.roles,name=ele)
             if role in member.roles:
-                message = "<@"+str(id_discord_a)+"> "+"Tu oponente <@"+str(id_discord_b)+"> tiene un rol que bloquea ese día."
+                message = "<@"+str(id_discord_a)+"> "+"Tu oponente <@"+str(id_discord_b)+"> tiene un rol que bloquea el día "+str.lower(days_hr[id_dia])+"."
                 await context.channel.send(message)
                 return
             if role in member_nopalibot.roles:
-                message = "<@"+str(id_discord_a)+"> "+"Este día esta bloqueado para todos."
+                message = "<@"+str(id_discord_a)+"> "+"El día "+str.lower(days_hr[id_dia])+" esta bloqueado para todos."
                 await context.channel.send(message)
                 return
+
+        # Mandamos mensajes
+        await self.message_ft(context, id_dia, id_juego, id_discord_a, id_discord_b, self.bot.vars["max_retas_dia"])
+
+
+
+    # Funcion auxiliar para dibujar mensaje
+    async def message_ft(self, context: discord.ext.commands.Context, id_dia: int, id_juego: int, id_discord_a: int, id_discord_b: int, maxRetasDia: int):
+
+        # Un par de constantes
+        days_hr = self.bot.vars["days_hr"]
+        nm_juego = self.valid_games[id_juego]
 
          # Construccion del mensaje de reto
         challenge_channel = self.bot.get_channel(int(os.environ['NPL_CNL_CHALLENGE']))
@@ -173,6 +186,60 @@ class FtCog(commands.Cog):
 
         # Emite el reto
         await challenge_channel.send(content=message,embed=invite,view=ChallengeView(timeout=None))
+
+
+
+    # Version admin del comando ft
+    @commands.command(name="ft-force")
+    @commands.has_role("Nopalote")
+    async def ft_force(self, context: discord.ext.commands.Context,*args: str):
+
+        # Declaraciones iniciales para todas las opciones
+        db_con = sqlite3.connect(os.getenv("NPL_DB_PATH"))
+        db_cur = db_con.cursor()
+        id_channel = int(context.message.channel.id)
+        channel = self.bot.get_channel(id_channel)
+        valid_days = self.bot.vars["days_ascii"]
+        days_hr = self.bot.vars["days_hr"]
+
+        # Terminamos este comando si no esta en un canal valido o si no retamos a alguien valido
+        if (not id_channel in self.valid_channels):
+            return
+        elif not len(args)>0 or not bool(re.search("^<@.*?>$",args[0])):
+            message = "Este comando requiere tres argumentos: dos menciones y un dia."
+            await channel.send(message)
+            return
+        elif not len(args)>1 or not bool(re.search("^<@.*?>$",args[1])):
+            message = "Este comando requiere tres argumentos: dos menciones y un dia."
+            await channel.send(message)
+            return
+        elif not len(args)>2:
+            message = "Este comando requiere que especifiques el día que quieres retar."
+            await channel.send(message)
+            return
+        else:
+            # El retador
+            id_discord_a = convert_mention_to_id(args[0])
+            # Declaramos id_discord_b ya que pasamos los checks, checamos que no sea autoreta
+            id_discord_b = convert_mention_to_id(args[1])
+            if id_discord_b==id_discord_a:
+                message = "<@"+str(id_discord_a)+"> "+"No puedes retarte a ti mismo"
+                await channel.send(message)
+                return
+            # Terminamos si el dia de la semana no es valido
+            dia_sem = str.lower(remove_accents(args[2]))
+            if not dia_sem in valid_days:
+                message = "<@"+str(id_discord_a)+"> "+"Día de la semana no válido."
+                await channel.send(message)
+                return
+            else:
+                id_dia = valid_days.index(dia_sem)
+            # Finalmente determinamos el juego
+            id_juego = self.valid_channels.index(id_channel)
+            nm_juego = self.valid_games[id_juego]
+
+        # Mandamos mensajes
+        await self.message_ft(context, id_dia, id_juego, id_discord_a, id_discord_b, 256)
 
 
 
