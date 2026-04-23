@@ -33,7 +33,7 @@ bot.vars["days_ascii"] = [str.lower(remove_accents(ss)) for ss in bot.vars["days
 @bot.event
 async def on_ready():
     print("Nopalibot has logged in")
-    cogs = ["cogs.reactions","cogs.tekken_id","cogs.ft","cogs.ft_force","cogs.calendario","cogs.wavu"]
+    cogs = ["cogs.reactions","cogs.tekken_id","cogs.ft","cogs.calendario","cogs.wavu"]
     for cog in cogs:
         print("Loading "+cog)
         await bot.load_extension(cog)
